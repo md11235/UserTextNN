@@ -1,0 +1,7 @@
+所需要的reviews text里的word embeddings文件(对应 -embeddingFile 选项)可以从 http://ir.hit.edu.cn/~dytang/ 下载，具体论文为：
+
+Learning Sentiment-Specific Word Embedding for Twitter Sentiment Classification. [pdf][bib][slides][data (91M)][codes]
+Duyu Tang, Furu Wei, Nan Yang, Ming Zhou, Ting Liu, Bing Qin.
+Proceeding of the 52th Annual Meeting of the Association for Computational Linguistics (ACL 2014, full paper)
+
+
