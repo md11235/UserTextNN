@@ -7,23 +7,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 
-import org.omg.CORBA.UserException;
-
 import other.*;
 import nnet.*;
 
 public class UILookupDocAvg123Main {
 
-	LookupLinearTanh xseedLLT1;
-	LookupLinearTanh xseedLLT2;
-	LookupLinearTanh xseedLLT3;
+	LookupLinearTanh reviewWordSeedLLT1;
+	LookupLinearTanh reviewWordSeedLLT2;
+	LookupLinearTanh reviewWordSeedLLT3;
 	
-	MultiConnectLayer connect;
-	AverageLayer average;
+	MultiConnectLayer documentConnect;
+	AverageLayer documentAverage;
 	
 	LookupLayer userLookup;
 	LookupLayer itemLookup;
-	MultiConnectLayer connectUserItem;
+	MultiConnectLayer averagedDocumentUserItemConnect;
 	
 	LinearLayer linearForSoftmax;
 	SoftmaxLayer softmax;
@@ -33,84 +31,87 @@ public class UILookupDocAvg123Main {
 	HashMap<String, Integer> userVocab;
 	HashMap<String, Integer> itemVocab;
 	
-	String unkStr = "unk"; //"<unk>";
+	String unkStr = "<unk>";
 	
 	public UILookupDocAvg123Main(
-				String embeddingFileWord, 
-				int embeddingLengthWord,
-				int windowSizeWordLookup1,
-				int windowSizeWordLookup2,
-				int windowSizeWordLookup3,
-				int outputLengthWordLookup,
-				int embeddingLengthUserLookup,
-				int embeddingLengthItemLookup,
+				String wordEmbeddingFile, 
+				int wordEmbeddingLength,
+				int wordLookupWindowSize1,
+				int wordLookupWindowSize2,
+				int wordLookupWindowSize3,
+				int lltOutputLength,
+				int userEmbeddingLength,
+				int itemEmbeddingLength,
 				int classNum,
 				String trainFile,
 				String testFile,
 				double randomizeBase) throws Exception
 	{
-		loadData(trainFile, testFile);
+		// load reviews, and vocabularies for users and items(products) into:
+		// trainDataList, testDataList, userVocab, itemVocab
+		loadReviewsAndUsersAndItems(trainFile, testFile);
 		
 		wordVocab = new HashMap<String, Integer>();
 		
-		int embeddingLineCount = Funcs.lineCounter(embeddingFileWord, "utf8");
-		double[][] table = new double[embeddingLineCount][];
-		Funcs.loadEmbeddingFile(embeddingFileWord, embeddingLengthWord, "utf8", 
-				false, wordVocab, table);
+		int embeddingLineCount = Funcs.lineCounter(wordEmbeddingFile, "utf8");
+		double[][] wordEmbeddingTable = new double[embeddingLineCount][];
+		Funcs.loadWordsAndTheirEmbeddings(wordEmbeddingFile, wordEmbeddingLength, "utf8", 
+				false, wordVocab, wordEmbeddingTable);
 		
-		xseedLLT1 = new LookupLinearTanh(windowSizeWordLookup1, wordVocab.size(), outputLengthWordLookup, embeddingLengthWord);
-		xseedLLT1.lookup.setEmbeddings(table);
+		reviewWordSeedLLT1 = new LookupLinearTanh(wordLookupWindowSize1, wordVocab.size(), lltOutputLength, wordEmbeddingLength);
+		reviewWordSeedLLT1.lookup.setEmbeddings(wordEmbeddingTable);
 			
-		xseedLLT2 = new LookupLinearTanh(windowSizeWordLookup2, wordVocab.size(), outputLengthWordLookup, embeddingLengthWord);
-		xseedLLT2.lookup.setEmbeddings(table);
+		reviewWordSeedLLT2 = new LookupLinearTanh(wordLookupWindowSize2, wordVocab.size(), lltOutputLength, wordEmbeddingLength);
+		reviewWordSeedLLT2.lookup.setEmbeddings(wordEmbeddingTable);
 		
-		xseedLLT3 = new LookupLinearTanh(windowSizeWordLookup3, wordVocab.size(), outputLengthWordLookup, embeddingLengthWord);
-		xseedLLT3.lookup.setEmbeddings(table);
+		reviewWordSeedLLT3 = new LookupLinearTanh(wordLookupWindowSize3, wordVocab.size(), lltOutputLength, wordEmbeddingLength);
+		reviewWordSeedLLT3.lookup.setEmbeddings(wordEmbeddingTable);
 		
-		connect = new MultiConnectLayer(
-				new int[]{outputLengthWordLookup, outputLengthWordLookup, outputLengthWordLookup});
+		documentConnect = new MultiConnectLayer(
+				new int[]{lltOutputLength, lltOutputLength, lltOutputLength});
 		
-		average = new AverageLayer(connect.outputLength, outputLengthWordLookup);
-		connect.link(average);
+		documentAverage = new AverageLayer(documentConnect.outputLength, lltOutputLength);
+		documentConnect.link(documentAverage);
 		
 		// user item lookup layers
-		userLookup = new LookupLayer(embeddingLengthUserLookup, userVocab.size(), 1);
-		itemLookup = new LookupLayer(embeddingLengthItemLookup, itemVocab.size(), 1);
+		userLookup = new LookupLayer(userEmbeddingLength, userVocab.size(), 1);
+		itemLookup = new LookupLayer(itemEmbeddingLength, itemVocab.size(), 1);
 		
-		connectUserItem = new MultiConnectLayer(
-				new int[]{average.outputLength, userLookup.output.length, itemLookup.output.length});
+		averagedDocumentUserItemConnect = new MultiConnectLayer(
+				new int[]{documentAverage.outputLength, userLookup.output.length, itemLookup.output.length});
 		
-		average.link(connectUserItem, 0);
-		userLookup.link(connectUserItem, 1);
-		itemLookup.link(connectUserItem, 2);
+		// link: make the caller input for its first argument
+		documentAverage.link(averagedDocumentUserItemConnect, 0);
+		userLookup.link(averagedDocumentUserItemConnect, 1);
+		itemLookup.link(averagedDocumentUserItemConnect, 2);
 		
 		// linear for softmax
-		linearForSoftmax = new LinearLayer(connectUserItem.outputLength, classNum);
-		connectUserItem.link(linearForSoftmax);
+		linearForSoftmax = new LinearLayer(averagedDocumentUserItemConnect.outputLength, classNum);
+		averagedDocumentUserItemConnect.link(linearForSoftmax);
 		
 		softmax = new SoftmaxLayer(classNum);
 		linearForSoftmax.link(softmax);
 		
 		Random rnd = new Random(); 
-		xseedLLT1.randomize(rnd, -1.0 * randomizeBase, randomizeBase);
-		xseedLLT2.randomize(rnd, -1.0 * randomizeBase, randomizeBase);
-		xseedLLT3.randomize(rnd, -1.0 * randomizeBase, randomizeBase);
+		reviewWordSeedLLT1.randomize(rnd, -1.0 * randomizeBase, randomizeBase);
+		reviewWordSeedLLT2.randomize(rnd, -1.0 * randomizeBase, randomizeBase);
+		reviewWordSeedLLT3.randomize(rnd, -1.0 * randomizeBase, randomizeBase);
 		linearForSoftmax.randomize(rnd, -1.0 * randomizeBase, randomizeBase);
 	}
 	
 	List<Data> trainDataList;
 	List<Data> testDataList;  
 	
-	public void loadData(
+	public void loadReviewsAndUsersAndItems(
 			String trainFile,
 			String testFile)
 	{
 		System.out.println("================ start loading corpus ==============");
-		trainDataList = new ArrayList<Data>();  
 		
 		userVocab = new HashMap<String, Integer>();
 		itemVocab = new HashMap<String, Integer>();
 		
+		trainDataList = new ArrayList<Data>();  
 		Funcs.loadCorpus(trainFile, "utf8", trainDataList);
 		
 		for(Data data: trainDataList)
@@ -153,31 +154,32 @@ public class UILookupDocAvg123Main {
 
 			for(int idxData = 0; idxData < trainDataList.size(); idxData++)
 			{
-				Data data = trainDataList.get(idxData);
+				Data data = trainDataList.get(idxData); // get one review
 				
 				String[] sentences = data.reviewText.split("<sssss>");
-				int[][] wordIdMatrix = Funcs.fillDocument(sentences, wordVocab, unkStr);
+				// Doc: per sentence, then a list of words
+				int[][] sentenceWordsMatrix = Funcs.fillDocument(sentences, wordVocab, unkStr);
 				
 				DocAverage docAverage1 = new DocAverage(
-						xseedLLT1,
-						wordIdMatrix, 
+						reviewWordSeedLLT1,
+						sentenceWordsMatrix, 
 						wordVocab.get(unkStr));
 				
 				DocAverage docAverage2 = new DocAverage(
-						xseedLLT2,
-						wordIdMatrix, 
+						reviewWordSeedLLT2,
+						sentenceWordsMatrix, 
 						wordVocab.get(unkStr));
 				
 				DocAverage docAverage3 = new DocAverage(
-						xseedLLT3,
-						wordIdMatrix, 
+						reviewWordSeedLLT3,
+						sentenceWordsMatrix, 
 						wordVocab.get(unkStr));
 				
 				if(docAverage1.sentenceConvList.size() == 0 
 						|| docAverage2.sentenceConvList.size() == 0
 						|| docAverage3.sentenceConvList.size() == 0)
 				{
-					System.out.println(data.toString() + "docAverage.sentenceConvList.size() == 0");
+					System.out.println(data.toString() + " docAverage.sentenceConvList.size() == 0");
 					continue;
 				}
 				
@@ -185,20 +187,20 @@ public class UILookupDocAvg123Main {
 				itemLookup.input[0] = itemVocab.get(data.productStr);
 				
 				// important
-				docAverage1.link(connect, 0);
-				docAverage2.link(connect, 1);
-				docAverage3.link(connect, 2);
+				docAverage1.link(documentConnect, 0);
+				docAverage2.link(documentConnect, 1);
+				docAverage3.link(documentConnect, 2);
 				
 				// forward
  				docAverage1.forward();
  				docAverage2.forward();
  				docAverage3.forward();
- 				connect.forward();
-				average.forward();
+ 				documentConnect.forward();
+				documentAverage.forward();
 
 				userLookup.forward();
 				itemLookup.forward();
-				connectUserItem.forward();
+				averagedDocumentUserItemConnect.forward();
 				
  				linearForSoftmax.forward();
 				softmax.forward();
@@ -221,12 +223,12 @@ public class UILookupDocAvg123Main {
 				softmax.backward();
 				linearForSoftmax.backward();
 				
-				connectUserItem.backward();
+				averagedDocumentUserItemConnect.backward();
 				userLookup.backward();
 				itemLookup.backward();
 				
-				average.backward();
-				connect.backward();
+				documentAverage.backward();
+				documentConnect.backward();
 				docAverage1.backward();
 				docAverage2.backward();
 				docAverage3.backward();
@@ -249,10 +251,10 @@ public class UILookupDocAvg123Main {
 				docAverage1.clearGrad();
 				docAverage2.clearGrad();
 				docAverage3.clearGrad();
-				connect.clearGrad();
-				average.clearGrad();
+				documentConnect.clearGrad();
+				documentAverage.clearGrad();
 
-				connectUserItem.clearGrad();
+				averagedDocumentUserItemConnect.clearGrad();
 				userLookup.clearGrad();
 				itemLookup.clearGrad();
 				
@@ -270,6 +272,7 @@ public class UILookupDocAvg123Main {
 			
 			Funcs.dumpEmbedFile(dumpUserEmbeddingFile + "-" + round, "utf8", userVocab, userLookup.table, userLookup.embeddingLength);
 			Funcs.dumpEmbedFile(dumpItemEmbeddingFile + "-" + round, "utf8", itemVocab, itemLookup.table, itemLookup.embeddingLength);
+			//Funcs.dumpEmbedFile("wordEmbeddingFile" + "-" + round, "utf8", docAverage1., itemLookup.table, itemLookup.embeddingLength);
 			
 			System.out.println("============= finish training round: " + round + " ==============");
 			
@@ -292,17 +295,17 @@ public class UILookupDocAvg123Main {
 			int[][] wordIdMatrix = Funcs.fillDocument(sentences, wordVocab, unkStr);
 			
 			DocAverage docAverage1 = new DocAverage(
-					xseedLLT1,
+					reviewWordSeedLLT1,
 					wordIdMatrix, 
 					wordVocab.get(unkStr));
 			
 			DocAverage docAverage2 = new DocAverage(
-					xseedLLT2,
+					reviewWordSeedLLT2,
 					wordIdMatrix, 
 					wordVocab.get(unkStr));
 			
 			DocAverage docAverage3 = new DocAverage(
-					xseedLLT3,
+					reviewWordSeedLLT3,
 					wordIdMatrix, 
 					wordVocab.get(unkStr));
 			
@@ -318,20 +321,20 @@ public class UILookupDocAvg123Main {
 			itemLookup.input[0] = itemVocab.get(data.productStr);
 			
 			// important
-			docAverage1.link(connect, 0);
-			docAverage2.link(connect, 1);
-			docAverage3.link(connect, 2);
+			docAverage1.link(documentConnect, 0);
+			docAverage2.link(documentConnect, 1);
+			docAverage3.link(documentConnect, 2);
 			
 			// forward
 			docAverage1.forward();
 			docAverage2.forward();
 			docAverage3.forward();
-			connect.forward();
-			average.forward();
+			documentConnect.forward();
+			documentAverage.forward();
 
 			userLookup.forward();
 			itemLookup.forward();
-			connectUserItem.forward();
+			averagedDocumentUserItemConnect.forward();
 			
 			linearForSoftmax.forward();
 			softmax.forward();
@@ -367,7 +370,7 @@ public class UILookupDocAvg123Main {
 		System.out.println("==== end configuration ====");
 		
 		int embeddingLength = Integer.parseInt(argsMap.get("-embeddingLength"));
-		String embeddingFile = argsMap.get("-embeddingFile");
+		String wordEmbeddingFile = argsMap.get("-embeddingFile");
 		// for yelp14 dataset, windowsize = 1&2&3 works best than other settings. 
 		int windowSizeWordLookup1 = Integer.parseInt(argsMap.get("-windowSizeWordLookup1"));
 		int windowSizeWordLookup2 = Integer.parseInt(argsMap.get("-windowSizeWordLookup2"));
@@ -398,7 +401,7 @@ public class UILookupDocAvg123Main {
 		String dumpItemEmbeddingFile = argsMap.get("-dumpItemEmbeddingFile");
 		
 		UILookupDocAvg123Main main = new UILookupDocAvg123Main(
-				embeddingFile, 
+				wordEmbeddingFile, 
 				embeddingLength, 
 				windowSizeWordLookup1,
 				windowSizeWordLookup2,

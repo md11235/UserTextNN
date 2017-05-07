@@ -41,7 +41,7 @@ public class MathOp {
 	}
 	
 	
-	public static void Axpb(double[][] A, 
+	public static void A_times_x_plus_b(double[][] A, 
 			double[] x,
 			double[] b,
 			double[] results)
@@ -63,7 +63,10 @@ public class MathOp {
 		}
 	}
 	
-	public static void xdotA(double[] x, double[][] A, double[] results)
+	/*
+	 * results = transpose(A) * x // matrix-vector multiplication 
+	 */
+	public static void transA_times_x(double[] x, double[][] A, double[] results)
     {
 		int row = x.length;
 		int col = results.length;
@@ -82,7 +85,7 @@ public class MathOp {
         }
     }
 	
-	public static void A_add_xTmulty(double[] x, double[] y, double[][] A)
+	public static void A_add_trans_x_times_y(double[] x, double[] y, double[][] A)
     {
         int row = x.length;
         int col = y.length;

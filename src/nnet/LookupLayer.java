@@ -294,19 +294,19 @@ public class LookupLayer implements NNInterface
 		return lookup;
 	}
 	
-	public void setEmbeddings(double[][] embed) throws Exception
+	public void setEmbeddings(double[][] embeddingsTable) throws Exception
     {
-        if (embed == null || embed.length != table.length
-            || embed.length == 0)
+        if (embeddingsTable == null || embeddingsTable.length != table.length
+            || embeddingsTable.length == 0)
         {
-            throw new Exception("embedding does not match!");
+            throw new Exception("embedding dimension does not match!");
         }
 
         for (int i = 0; i < table.length; ++i)
         {
         	for(int j = 0; j < embeddingLength; j++)
         	{
-        		table[i][j] = embed[i][j];
+        		table[i][j] = embeddingsTable[i][j];
         	}
         }
     }

@@ -20,7 +20,7 @@ public class DocAverage implements NNInterface{
 	
 	public DocAverage(
 			LookupLinearTanh seedLLT,
-			int[][] wordIdMatrix,
+			int[][] sentenceWordsMatrix,
 			int unkIdx) throws Exception
 	{
 		int hiddenLength = seedLLT.outputLength;
@@ -28,20 +28,20 @@ public class DocAverage implements NNInterface{
 		
 		int windowSizeWord = seedLLT.lookup.inputLength;
 		
-		for(int i = 0; i < wordIdMatrix.length; i++)
+		for(int i = 0; i < sentenceWordsMatrix.length; i++)
 		{
-			if(wordIdMatrix[i].length >= windowSizeWord)
+			if(sentenceWordsMatrix[i].length >= windowSizeWord)
 			{
-				sentenceConvList.add(new SentenceConv(wordIdMatrix[i], seedLLT));
+				sentenceConvList.add(new SentenceConv(sentenceWordsMatrix[i], seedLLT));
 			}
 			else
 			{
 				int[] tmpIds = new int[windowSizeWord];
 				for(int k = 0; k < windowSizeWord; k++)
 				{
-					if(k < wordIdMatrix[i].length)
+					if(k < sentenceWordsMatrix[i].length)
 					{
-						tmpIds[k] = wordIdMatrix[i][k];
+						tmpIds[k] = sentenceWordsMatrix[i][k];
 					}
 					else
 					{

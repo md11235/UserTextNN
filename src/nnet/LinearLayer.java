@@ -82,14 +82,15 @@ public class LinearLayer implements NNInterface{
 	@Override
 	public void forward() {
 		// TODO Auto-generated method stub
-		MathOp.Axpb(W, input, b, output);
+		MathOp.A_times_x_plus_b(W, input, b, output);
 	}
 
 	@Override
 	public void backward() {
 		// TODO Auto-generated method stub
-		MathOp.xdotA(outputG, W, inputG);
-		MathOp.A_add_xTmulty(outputG, input, WG);
+		MathOp.transA_times_x(outputG, W, inputG); // to be used by the previous layer
+		
+		MathOp.A_add_trans_x_times_y(outputG, input, WG);
 		
 		for (int i = 0; i < bG.length; ++i)
         {

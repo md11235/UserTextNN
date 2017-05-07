@@ -23,10 +23,11 @@ public class LookupLinearTanh implements NNInterface{
 			LinearLayer seedLinear) throws Exception
 	{
 		vocabSize = seedLookup.vocabSize;
-		outputLength = seedLinear.outputLength;
 		embeddingLength = seedLookup.embeddingLength;
 		windowSize = seedLookup.inputLength;
-		
+
+		outputLength = seedLinear.outputLength;
+
 		lookup = (LookupLayer) seedLookup.cloneWithTiedParams();
 		linear = (LinearLayer) seedLinear.cloneWithTiedParams();
 		tanh = new TanhLayer(outputLength);

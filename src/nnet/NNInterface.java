@@ -15,7 +15,8 @@ public interface NNInterface {
 	public void updateAdaGrad(double learningRate, int batchsize);
 	
 	public void clearGrad();
-	
+
+	// makes the caller input for its first argument
 	public void link(NNInterface nextLayer, int id) throws Exception;
 
     public void link(NNInterface nextLayer) throws Exception;

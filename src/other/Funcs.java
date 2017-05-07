@@ -39,7 +39,7 @@ public class Funcs {
 		return lineCounter;
 	}
 	
-	public static void loadEmbeddingFile(String embedFile,
+	public static void loadWordsAndTheirEmbeddings(String embedFile,
 			int embeddingLength,
 			String encoding,
 			boolean isL2Norm,
@@ -640,6 +640,7 @@ public class Funcs {
 		return sim;
 	}
 	
+	// fill in wordId for each sentence?
 	public static int[][] fillDocument(
 			String[] sentences,
 			HashMap<String, Integer> vocabMap,

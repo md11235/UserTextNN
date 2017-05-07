@@ -20,19 +20,19 @@ public class SentenceConv implements NNInterface{
 	}
 	
 	public SentenceConv(
-			int[] wordIds,
+			int[] sentenceWordIds,
 			LookupLinearTanh seedLLT
 		) throws Exception 
 	{
 		int windowSizeLookup = seedLLT.lookup.inputLength;
 		LLTlist = new ArrayList<LookupLinearTanh>();
 		
-		for(int i = 0; i < wordIds.length - windowSizeLookup + 1; i++)
+		for(int i = 0; i < sentenceWordIds.length - windowSizeLookup + 1; i++)
 		{
 			LookupLinearTanh tmpLLT = seedLLT.cloneWithTiedParams();
 			for(int j = 0; j < windowSizeLookup; j++)
 			{
-				tmpLLT.lookup.input[j] = wordIds[i + j];
+				tmpLLT.lookup.input[j] = sentenceWordIds[i + j];
 			}
 			LLTlist.add(tmpLLT);
 		}
