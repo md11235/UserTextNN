@@ -48,8 +48,11 @@ for iteration in range(0, num_iterations):
         try:
             rand_review_id = random.randrange(0, num_user_reviews)
             user_score = user_review_records[user][rand_review_id]['score']
-            
-            rand_review_id1 = random.randrange(0, num_user_reviews)
+
+            rand_review_id1 = rand_review_id
+            while rand_review_id1 == rand_review_id:
+                rand_review_id1 = random.randrange(0, num_user_reviews)
+
             same_user_score = user_review_records[user][rand_review_id1]['score']
 
             current_measure_same += abs(same_user_score - user_score)
